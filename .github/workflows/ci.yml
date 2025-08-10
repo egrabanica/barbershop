@@ -1,0 +1,106 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint-and-typecheck:
+    name: Lint & TypeCheck
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 🏗 Setup repo
+        uses: actions/checkout@v4
+
+      - name: 🏗 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18.x
+          cache: npm
+
+      - name: 📦 Install dependencies
+        run: |
+          cd apps/mobile
+          npm ci
+
+      - name: 🧹 Lint code
+        run: |
+          cd apps/mobile
+          npm run lint
+
+      - name: 🔍 Type check
+        run: |
+          cd apps/mobile  
+          npm run typecheck
+
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🏗 Setup repo
+        uses: actions/checkout@v4
+
+      - name: 🏗 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18.x
+          cache: npm
+
+      - name: 📦 Install dependencies
+        run: |
+          cd apps/mobile
+          npm ci
+
+      - name: 🧪 Run tests
+        run: |
+          cd apps/mobile
+          npm test
+
+  # E2E tests (will add Detox later)
+  e2e:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+      - name: 🏗 Setup repo
+        uses: actions/checkout@v4
+
+      - name: 🏗 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18.x
+          cache: npm
+
+      - name: 📦 Install dependencies
+        run: |
+          cd apps/mobile
+          npm ci
+
+      - name: 🤖 Run E2E smoke tests
+        run: |
+          cd apps/mobile
+          echo "E2E tests will be added in Milestone 6"
+
+  # Security audit
+  audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 🏗 Setup repo
+        uses: actions/checkout@v4
+
+      - name: 🏗 Setup Node  
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18.x
+
+      - name: 🔒 Run security audit
+        run: |
+          cd apps/mobile
+          npm audit --audit-level moderate

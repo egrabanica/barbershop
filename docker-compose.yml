@@ -1,0 +1,188 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: barbershop
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: your-super-secret-password
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./supabase/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d barbershop"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Supabase Auth & API
+  supabase-auth:
+    image: supabase/gotrue:v2.143.0
+    restart: unless-stopped
+    environment:
+      GOTRUE_API_HOST: 0.0.0.0
+      GOTRUE_API_PORT: 9999
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DB_DATABASE_URL: postgres://postgres:your-super-secret-password@postgres:5432/barbershop?sslmode=disable
+      GOTRUE_SITE_URL: http://localhost:3000
+      GOTRUE_URI_ALLOW_LIST: http://localhost:3000,exp://192.168.*:8081
+      GOTRUE_JWT_ADMIN_ROLES: admin
+      GOTRUE_JWT_AUD: authenticated
+      GOTRUE_JWT_DEFAULT_GROUP_NAME: authenticated
+      GOTRUE_JWT_EXP: 3600
+      GOTRUE_JWT_SECRET: your-super-secret-jwt-secret-with-at-least-32-characters
+      GOTRUE_DISABLE_SIGNUP: false
+      GOTRUE_SMTP_HOST: localhost
+      GOTRUE_SMTP_PORT: 587
+      GOTRUE_SMTP_USER: ""
+      GOTRUE_SMTP_PASS: ""
+      GOTRUE_SMTP_ADMIN_EMAIL: admin@barbershop.local
+      GOTRUE_MAILER_AUTOCONFIRM: true
+    ports:
+      - "9999:9999"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # PostgREST API
+  postgrest:
+    image: postgrest/postgrest:v12.0.2
+    restart: unless-stopped
+    environment:
+      PGRST_DB_URI: postgres://postgres:your-super-secret-password@postgres:5432/barbershop
+      PGRST_DB_SCHEMAS: public
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: your-super-secret-jwt-secret-with-at-least-32-characters
+      PGRST_DB_USE_LEGACY_GUCS: false
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # Supabase Storage
+  supabase-storage:
+    image: supabase/storage-api:v0.43.11
+    restart: unless-stopped
+    environment:
+      ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlhdCI6MTY0NTAwNDY4NCwiZXhwIjoxOTYwNTgwNjg0fQ.M9jrxyvbGZN_3ML6K5h1ZzHfOa0HxG8Xqc_-PkDJ1pA
+      SERVICE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIiwiaWF0IjoxNjQ1MDA0Njg0LCJleHAiOjE5NjA1ODA2ODR9.V2SWx1zFQH2qWJOnPhMKT8wnXhNGEfXMrJ5rE7cQl4g
+      PGOPTIONS: -c search_path=storage,public
+      DATABASE_URL: postgres://postgres:your-super-secret-password@postgres:5432/barbershop
+      FILE_SIZE_LIMIT: 52428800
+      STORAGE_BACKEND: file
+      FILE_STORAGE_BACKEND_PATH: /var/lib/storage
+      TENANT_ID: stub
+      REGION: stub
+      GLOBAL_S3_BUCKET: stub
+      ENABLE_IMAGE_TRANSFORMATION: true
+      IMGPROXY_URL: http://imgproxy:5001
+    volumes:
+      - storage_data:/var/lib/storage
+    ports:
+      - "5000:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # Image Proxy for storage
+  imgproxy:
+    image: darthsim/imgproxy:v3.19
+    restart: unless-stopped
+    environment:
+      IMGPROXY_BIND: 0.0.0.0:5001
+      IMGPROXY_LOCAL_FILESYSTEM_ROOT: /var/lib/storage
+      IMGPROXY_USE_ETAG: true
+    volumes:
+      - storage_data:/var/lib/storage
+    ports:
+      - "5001:5001"
+
+  # PostHog Analytics (Self-hosted)
+  posthog:
+    image: posthog/posthog:latest
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://postgres:your-super-secret-password@postgres:5432/barbershop
+      REDIS_URL: redis://redis:6379/
+      SECRET_KEY: your-super-secret-posthog-key-with-at-least-32-characters
+      SITE_URL: http://localhost:8000
+      DISABLE_SECURE_SSL_REDIRECT: 1
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # Redis for PostHog
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Novu Notification Infrastructure
+  novu-api:
+    image: ghcr.io/novuhq/novu/api:0.21.0
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      MONGO_URL: mongodb://mongo:27017/novu
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: your-super-secret-novu-jwt
+      STORE_ENCRYPTION_KEY: your-super-secret-32-char-encryption-key
+      NEW_RELIC_APP_NAME: Novu API
+    ports:
+      - "3001:3000"
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # Novu Web Interface  
+  novu-web:
+    image: ghcr.io/novuhq/novu/web:0.21.0
+    restart: unless-stopped
+    environment:
+      REACT_APP_API_URL: http://localhost:3001
+      REACT_APP_ENVIRONMENT: production
+    ports:
+      - "4200:4200"
+    depends_on:
+      - novu-api
+
+  # MongoDB for Novu
+  mongo:
+    image: mongo:6
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: your-super-secret-mongo-password
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+volumes:
+  postgres_data:
+  storage_data:
+  redis_data:
+  mongo_data:

@@ -1,0 +1,16 @@
+# Global ownership
+* @owner
+
+# Mobile app
+/apps/mobile/ @owner
+
+# Database & Infrastructure  
+/supabase/ @owner
+/docker/ @owner
+
+# CI/CD
+/.github/ @owner
+
+# Documentation
+/docs/ @owner
+README.md @owner
