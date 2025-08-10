@@ -1,0 +1,25 @@
+# Global ownership - all files require review from main maintainer
+# Replace 'yourusername' with your actual GitHub username
+* @yourusername
+
+# Mobile app code
+/apps/mobile/ @yourusername
+
+# Backend and database
+/supabase/ @yourusername
+/server/ @yourusername
+
+# Infrastructure and CI/CD
+/.github/ @yourusername
+/.env.example @yourusername
+
+# Documentation
+README.md @yourusername
+/docs/ @yourusername
+*.md @yourusername
+
+# Configuration files
+package.json @yourusername
+tsconfig.json @yourusername
+.eslintrc.js @yourusername
+.prettierrc @yourusername

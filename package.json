@@ -1,0 +1,29 @@
+{
+  "name": "barbershop-app",
+  "version": "1.0.0",
+  "description": "A production-ready React Native barbershop booking app",
+  "scripts": {
+    "dev:local": "concurrently \"npm run supabase:start\" \"npm run mobile:start\"",
+    "supabase:start": "supabase start",
+    "supabase:stop": "supabase stop",
+    "supabase:status": "supabase status",
+    "mobile:start": "cd apps/mobile && expo start",
+    "setup:local": "powershell -ExecutionPolicy Bypass -File setup-local.ps1",
+    "db:migrate": "supabase db push",
+    "db:seed": "supabase db seed",
+    "db:reset": "supabase db reset",
+    "health-check": "node health-check.js",
+    "lint": "cd apps/mobile && npm run lint",
+    "test": "cd apps/mobile && npm run test",
+    "typecheck": "cd apps/mobile && npm run typecheck"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "express": "^4.18.2",
+    "cors": "^2.8.5"
+  },
+  "private": true,
+  "workspaces": [
+    "apps/mobile"
+  ]
+}

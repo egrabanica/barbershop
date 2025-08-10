@@ -38,12 +38,20 @@ A production-ready React Native (Expo) barbershop booking app with self-hosted i
 - Expo CLI (`npm i -g @expo/cli`)
 
 ### Development Setup
-```bash
-# Clone and install
-git clone <repo-url>
-cd barbershop-app
-npm install
 
+#### Option 1: Docker-Free (Recommended)
+```powershell
+# Run the quick setup script
+.\quick-start-no-docker.ps1
+
+# OR manually:
+# Install dependencies and choose Supabase Cloud or Local PostgreSQL
+npm install
+cd apps/mobile && npm install
+```
+
+#### Option 2: Docker (Advanced)
+```bash
 # Start infrastructure
 docker compose up -d
 
@@ -51,6 +59,8 @@ docker compose up -d
 cd apps/mobile
 expo start
 ```
+
+📖 **See [DOCKER_FREE_SETUP.md](DOCKER_FREE_SETUP.md) for detailed Docker-free instructions**
 
 ## Project Structure
 ```
